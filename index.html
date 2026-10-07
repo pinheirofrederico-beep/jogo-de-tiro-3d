@@ -2,529 +2,162 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>FPS 3D - Campo de Batalha Realista</title>
+  <title>FPS Online 3D Realista</title>
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      user-select: none;
-      background: #000;
-    }
-    #crosshair {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 12px;
-      height: 12px;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      z-index: 10;
-    }
-    #crosshair::before, #crosshair::after {
-      content: '';
-      position: absolute;
-      background: rgba(255, 255, 255, 0.9);
-      box-shadow: 0 0 3px #000;
-    }
-    #crosshair::before { top: 5px; left: 0; width: 12px; height: 2px; }
-    #crosshair::after { top: 0; left: 5px; width: 2px; height: 12px; }
-
-    #hud {
-      position: absolute;
-      top: 20px;
-      left: 20px;
-      color: #fff;
-      z-index: 10;
-      pointer-events: none;
-    }
-    .hud-card {
-      background: rgba(10, 12, 16, 0.85);
-      padding: 12px 18px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      margin-bottom: 10px;
-      font-size: 13px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    }
-    #health-bar-bg {
-      width: 200px;
-      height: 14px;
-      background: #333;
-      border-radius: 3px;
-      overflow: hidden;
-      margin-top: 5px;
-      border: 1px solid #555;
-    }
-    #health-bar-fill {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, #ff3333, #ff6666);
-      transition: width 0.1s ease-out;
-    }
-
-    #ammo-card {
-      position: absolute;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(10, 12, 16, 0.85);
-      padding: 15px 25px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #fff;
-      font-size: 26px;
-      font-weight: bold;
-      z-index: 10;
-      pointer-events: none;
-    }
-
-    #damage-overlay {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: radial-gradient(circle, transparent 40%, rgba(255, 0, 0, 0.4) 100%);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.15s ease-out;
-      z-index: 8;
-    }
-
-    #game-over {
-      display: none;
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 0, 0, 0.9);
-      color: #ff4444;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      font-size: 36px;
-      font-weight: bold;
-      z-index: 20;
-    }
-    #game-over button {
-      margin-top: 20px;
-      padding: 12px 25px;
-      font-size: 18px;
-      background: #ff4444;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    #game-over button:hover { background: #cc0000; }
+    body { margin: 0; overflow: hidden; font-family: sans-serif; background: #000; color: #fff; }
+    #crosshair { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid #fff; border-radius: 50%; pointer-events: none; z-index: 10; }
+    #net-ui { position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.85); padding: 15px; border-radius: 8px; z-index: 20; border: 1px solid #333; }
+    input, button { padding: 8px 12px; margin: 5px 0; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+    button { cursor: pointer; background: #0066cc; }
+    button:hover { background: #0055aa; }
+    #hud { position: absolute; bottom: 20px; right: 20px; background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 5px; font-size: 20px; font-weight: bold; border: 1px solid #333; }
   </style>
 </head>
 <body>
 
   <div id="crosshair"></div>
-  <div id="damage-overlay"></div>
-
-  <div id="hud">
-    <div class="hud-card">
-      <b style="color: #ffcc00; font-size: 14px;">CAMPO DE BATALHA FPS</b><br>
-      <b>W, A, S, D</b>: Mover | <b>Mouse</b>: Olhar<br>
-      <b>Clique Esquerdo</b>: Atirar | <b>R</b>: Recarregar
-    </div>
-    <div class="hud-card">
-      VIDA DO JOGADOR
-      <div id="health-bar-bg"><div id="health-bar-fill"></div></div>
-    </div>
+  
+  <div id="net-ui">
+    <h3 style="margin-top:0;">MULTIPLAYER ONLINE (P2P)</h3>
+    <div>Seu ID: <b id="my-id" style="color:#00ccff;">Gerando...</b></div>
+    <hr style="border-color:#444;">
+    <input type="text" id="peer-id-input" placeholder="Cole o ID do outro jogador">
+    <button id="connect-btn">Conectar à Partida</button>
+    <div id="status" style="color: #ffcc00; margin-top: 5px;">Aguardando conexão...</div>
   </div>
 
-  <div id="ammo-card">MUNIÇÃO: <span id="ammo">30</span>/30</div>
+  <div id="hud">MUNIÇÃO: <span id="ammo">30</span>/30</div>
 
-  <div id="game-over">
-    <div>VOCÊ FOI ELIMINADO</div>
-    <button onclick="location.reload()">REINICIAR BATALHA</button>
-  </div>
-
+  <!-- Bibliotecas externas via CDN: Three.js, GLTFLoader para 3D e PeerJS para Online -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script>
-    // 1. CONFIGURAÇÃO DA CENA E ILUMINAÇÃO
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0e1116);
-    scene.fog = new THREE.FogExp2(0x0e1116, 0.012);
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, 500);
+  <script>
+    // 1. CENA, CÂMERA E RENDERIZADOR
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111318);
+    scene.fog = new THREE.FogExp2(0x111318, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.1;
     document.body.appendChild(renderer.domElement);
 
-    // Iluminação de guerra
-    const ambientLight = new THREE.AmbientLight(0xdde5ff, 0.35);
-    scene.add(ambientLight);
+    // Iluminação
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
+    light.position.set(20, 40, 20);
+    light.castShadow = true;
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
-    const sun = new THREE.DirectionalLight(0xfff0dd, 1.3);
-    sun.position.set(60, 80, 40);
-    sun.castShadow = true;
-    sun.shadow.mapSize.width = 2048;
-    sun.shadow.mapSize.height = 2048;
-    sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 200;
-    const d = 70;
-    sun.shadow.camera.left = -d; sun.shadow.camera.right = d;
-    sun.shadow.camera.top = d; sun.shadow.camera.bottom = -d;
-    scene.add(sun);
-
-    // Light de preenchimento avermelhada (fogo de guerra)
-    const warLight = new THREE.PointLight(0xff5500, 1.5, 60);
-    warLight.position.set(-20, 5, -30);
-    scene.add(warLight);
-
-    // 2. CAMPO DE BATALHA (Ruínas, Barricadas e Sacos de Areia)
-    function createGridTexture() {
-      const canvas = document.createElement('canvas');
-      canvas.width = 512; canvas.height = 512;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#1c1f26';
-      ctx.fillRect(0,0,512,512);
-      ctx.strokeStyle = '#2d3340';
-      ctx.lineWidth = 6;
-      ctx.strokeRect(0,0,512,512);
-      for(let i=0; i<3000; i++) {
-        ctx.fillStyle = `rgba(255,255,255,${Math.random()*0.05})`;
-        ctx.fillRect(Math.random()*512, Math.random()*512, 2, 2);
-      }
-      return new THREE.CanvasTexture(canvas);
-    }
-
-    const floorTexture = createGridTexture();
-    floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping;
-    floorTexture.repeat.set(30, 30);
-
-    const floorGeo = new THREE.PlaneGeometry(180, 180);
-    const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.85, metalness: 0.15 });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    // Chão
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(100, 100),
+      new THREE.MeshStandardMaterial({ color: 0x22252c, roughness: 0.8 })
+    );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     scene.add(floor);
 
-    // Construção de ruínas/barricadas
-    const obstacles = [];
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x3d4350, roughness: 0.7, metalness: 0.3 });
-    const sandbagMat = new THREE.MeshStandardMaterial({ color: 0x6e624d, roughness: 0.9 });
-
-    function createWall(x, z, w, h, d, rot=0) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-      wall.position.set(x, h/2, z);
-      wall.rotation.y = rot;
-      wall.castShadow = true;
-      wall.receiveShadow = true;
-      scene.add(wall);
-      obstacles.push(wall);
-    }
-
-    // Muros e trincheiras
-    createWall(0, -25, 30, 3.5, 1.5);
-    createWall(-20, -10, 1.5, 4, 25);
-    createWall(20, -10, 1.5, 4, 25);
-    createWall(-15, -45, 20, 3, 1.5, 0.3);
-    createWall(15, -45, 20, 3, 1.5, -0.3);
-    createWall(-35, -30, 15, 3.5, 1.5, 0.8);
-    createWall(35, -30, 15, 3.5, 1.5, -0.8);
-
-    // Barricadas menores
-    for(let i=0; i<15; i++) {
-      const sb = new THREE.Mesh(new THREE.BoxGeometry(2.5, 1.2, 1.2), sandbagMat);
-      sb.position.set((Math.random()-0.5)*120, 0.6, -10 - Math.random()*80);
-      sb.rotation.y = Math.random() * Math.PI;
-      sb.castShadow = true;
-      sb.receiveShadow = true;
-      scene.add(sb);
-      obstacles.push(sb);
-    }
-
-    // 3. JOGADOR E ARMA EM 1ª PESSOA
-    camera.position.set(0, 1.7, 10);
-    let playerHP = 100;
-    let ammo = 30;
-    let isReloading = false;
-    let isLocked = false;
-    let isDead = false;
-
+    // 2. CARREGAMENTO DE MODELO 3D REALISTA (GLTF)
+    const loader = new THREE.GLTFLoader();
     const weaponGroup = new THREE.Group();
-    const gunMat = new THREE.MeshStandardMaterial({ color: 0x17191d, metalness: 0.9, roughness: 0.2 });
-    const armMat = new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 0.7 });
-
-    // Braço direito
-    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 1.1, 12), armMat);
-    arm.position.set(0.2, -0.32, -0.35);
-    arm.rotation.set(Math.PI / 2.8, -0.2, -0.3);
-    weaponGroup.add(arm);
-
-    // Corpo do Fuzil
-    const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.18, 0.95), gunMat);
-    weaponGroup.add(gunBody);
-
-    // Cano
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 12), gunMat);
-    barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.03, -0.8);
-    weaponGroup.add(barrel);
-
-    // Carregador
-    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.32, 0.16), gunMat);
-    mag.position.set(0, -0.2, -0.05);
-    mag.rotation.x = Math.PI / 7;
-    weaponGroup.add(mag);
-
-    // Mira Holográfica
-    const sight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.2), gunMat);
-    sight.position.set(0, 0.13, -0.1);
-    weaponGroup.add(sight);
-
-    // Muzzle Flash (Luz + Malha)
-    const flashLight = new THREE.PointLight(0xffaa11, 0, 8);
-    flashLight.position.set(0, 0.03, -1.2);
-    weaponGroup.add(flashLight);
-
-    const muzzleFlash = new THREE.Mesh(
-      new THREE.SphereGeometry(0.12, 8, 8),
-      new THREE.MeshBasicMaterial({ color: 0xffcc33, transparent: true, opacity: 0 })
-    );
-    muzzleFlash.position.set(0, 0.03, -1.2);
-    weaponGroup.add(muzzleFlash);
-
-    weaponGroup.position.set(0.32, -0.32, -0.55);
     camera.add(weaponGroup);
     scene.add(camera);
+    camera.position.set(0, 1.7, 0);
 
-    // 4. SISTEMA DE TRAÇANTES E FAÍSCAS (PARTÍCULAS)
-    const tracers = [];
-    const sparks = [];
-
-    // Traçante Amarelo (Jogador) / Vermelho (Inimigos)
-    function spawnTracer(startPos, dirVector, isEnemy = false) {
-      const geo = new THREE.CylinderGeometry(0.02, 0.02, 1.8, 6);
-      geo.rotateX(Math.PI / 2);
-      const mat = new THREE.MeshBasicMaterial({ 
-        color: isEnemy ? 0xff2200 : 0xffdd44,
-        transparent: true,
-        opacity: 0.9
-      });
-      const tracer = new THREE.Mesh(geo, mat);
-      tracer.position.copy(startPos);
-      tracer.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1), dirVector.clone().normalize());
-
-      scene.add(tracer);
-      tracers.push({
-        mesh: tracer,
-        dir: dirVector.clone().normalize(),
-        speed: 120, // Velocidade alta
-        life: 0.8
-      });
-    }
-
-    // Emissão de Faíscas no Impacto
-    function spawnSparks(hitPoint, normal) {
-      const sparkCount = 12 + Math.floor(Math.random() * 8);
-      for (let i = 0; i < sparkCount; i++) {
-        const p = new THREE.Mesh(
-          new THREE.BoxGeometry(0.04, 0.04, 0.04),
-          new THREE.MeshBasicMaterial({ color: 0xffaa22 })
-        );
-        p.position.copy(hitPoint);
-
-        // Vetor de reflexão / dispersão de faíscas
-        const spread = new THREE.Vector3(
-          normal.x + (Math.random() - 0.5) * 1.5,
-          normal.y + (Math.random() - 0.2) * 1.5,
-          normal.z + (Math.random() - 0.5) * 1.5
-        ).normalize().multiplyScalar(4 + Math.random() * 8);
-
-        scene.add(p);
-        sparks.push({
-          mesh: p,
-          vel: spread,
-          life: 0.25 + Math.random() * 0.2
-        });
-      }
-    }
-
-    // 5. INIMIGOS (NPCs COM IA QUE SE MOVIMENTAM E ATIRAM)
-    const enemies = [];
-    const enemyMat = new THREE.MeshStandardMaterial({ color: 0x992222, roughness: 0.5, metalness: 0.4 });
-    const enemyArmorMat = new THREE.MeshStandardMaterial({ color: 0x1f232b, roughness: 0.6 });
-
-    function createEnemy(x, z) {
-      const group = new THREE.Group();
-
-      // Corpo/Tronco
-      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.2, 0.4), enemyArmorMat);
-      torso.position.y = 1.1;
-      torso.castShadow = true;
-      group.add(torso);
-
-      // Capacete/Cabeça
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 12), enemyMat);
-      head.position.y = 1.95;
-      head.castShadow = true;
-      group.add(head);
-
-      // Arma do NPC
-      const enemyGun = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.7), gunMat);
-      enemyGun.position.set(0.3, 1.1, -0.4);
-      group.add(enemyGun);
-
-      group.position.set(x, 0, z);
-      scene.add(group);
-
-      enemies.push({
-        group: group,
-        hp: 100,
-        lastShootTime: 0,
-        shootInterval: 1.2 + Math.random() * 1.0, // Intervalo de tiro
-        speed: 2.5 + Math.random() * 1.5,
-        patrolTarget: new THREE.Vector3(x, 0, z)
-      });
-    }
-
-    // Spawna 6 NPCs pelo campo de batalha
-    createEnemy(-10, -20);
-    createEnemy(10, -30);
-    createEnemy(-25, -45);
-    createEnemy(25, -40);
-    createEnemy(0, -60);
-    createEnemy(-15, -70);
-
-    // 6. CONTROLES E LÓGICA DO JOGADOR
-    const keys = {};
-    document.addEventListener('keydown', (e) => {
-      keys[e.code] = true;
-      if (e.code === 'KeyR' && ammo < 30 && !isReloading && !isDead) reload();
+    // Exemplo de carregamento de modelo GLTF da web
+    loader.load('https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FPS_Weapon/glTF/FPS_Weapon.gltf', (gltf) => {
+      const model = gltf.scene;
+      model.scale.set(0.5, 0.5, 0.5);
+      model.position.set(0.2, -0.3, -0.5);
+      weaponGroup.add(model);
+    }, undefined, (error) => {
+      // Fallback simples se o asset externo falhar o carregamento
+      const fallbackBox = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.6), new THREE.MeshStandardMaterial({color: 0x222222}));
+      fallbackBox.position.set(0.2, -0.2, -0.4);
+      weaponGroup.add(fallbackBox);
     });
-    document.addEventListener('keyup', (e) => keys[e.code] = false);
 
-    document.body.addEventListener('click', () => {
-      if (!isLocked && !isDead) document.body.requestPointerLock();
+    // 3. MULTIPLAYER ONLINE COM PEERJS (WebRTC)
+    const peer = new Peer(); // Conecta ao servidor de sinalização do PeerJS
+    let conn = null;
+    const remotePlayers = {};
+
+    peer.on('open', (id) => {
+      document.getElementById('my-id').innerText = id;
+    });
+
+    peer.on('connection', (connection) => {
+      conn = connection;
+      setupNetworkHandlers();
+    });
+
+    document.getElementById('connect-btn').addEventListener('click', () => {
+      const remoteId = document.getElementById('peer-id-input').value.trim();
+      if (remoteId) {
+        conn = peer.connect(remoteId);
+        setupNetworkHandlers();
+      }
+    });
+
+    function setupNetworkHandlers() {
+      document.getElementById('status').innerText = 'ONLINE - CONECTADO!';
+      document.getElementById('status').style.color = '#00ff66';
+
+      // Avatar 3D para o jogador remoto
+      const otherPlayer = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.4, 1.2),
+        new THREE.MeshStandardMaterial({ color: 0x0088ff, roughness: 0.3 })
+      );
+      otherPlayer.castShadow = true;
+      scene.add(otherPlayer);
+      remotePlayers['peer'] = otherPlayer;
+
+      conn.on('data', (data) => {
+        if (data.type === 'move') {
+          otherPlayer.position.set(data.x, data.y, data.z);
+          otherPlayer.rotation.y = data.rotY;
+        }
+      });
+    }
+
+    // 4. CONTROLES E SINCRONIZAÇÃO EM TEMPO REAL
+    let isLocked = false;
+    document.body.addEventListener('click', (e) => {
+      if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'BUTTON') {
+        document.body.requestPointerLock();
+      }
     });
 
     document.addEventListener('pointerlockchange', () => {
       isLocked = document.pointerLockElement === document.body;
     });
 
+    const keys = {};
+    document.addEventListener('keydown', (e) => keys[e.code] = true);
+    document.addEventListener('keyup', (e) => keys[e.code] = false);
+
     const euler = new THREE.Euler(0, 0, 0, 'YXZ');
     document.addEventListener('mousemove', (e) => {
-      if (!isLocked || isDead) return;
+      if (!isLocked) return;
       euler.y -= e.movementX * 0.002;
       euler.x -= e.movementY * 0.002;
       euler.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, euler.x));
       camera.quaternion.setFromEuler(euler);
     });
 
-    // Animação de Recuo
-    let recoilOffset = 0;
-    let recoilRot = 0;
-
-    const raycaster = new THREE.Raycaster();
-
-    // Disparo do Jogador
-    document.addEventListener('mousedown', (e) => {
-      if (!isLocked || e.button !== 0 || ammo <= 0 || isReloading || isDead) return;
-
-      ammo--;
-      document.getElementById('ammo').innerText = ammo;
-
-      // Efeitos Visuais
-      recoilOffset = 0.15;
-      recoilRot = 0.12;
-      muzzleFlash.material.opacity = 1;
-      flashLight.intensity = 3;
-      setTimeout(() => {
-        muzzleFlash.material.opacity = 0;
-        flashLight.intensity = 0;
-      }, 40);
-
-      // Origem do Disparo
-      const gunMuzzlePos = new THREE.Vector3();
-      muzzleFlash.getWorldPosition(gunMuzzlePos);
-
-      // Direção do tiro
-      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-      const shootDir = raycaster.ray.direction.clone();
-
-      // Dispara Traçante
-      spawnTracer(gunMuzzlePos, shootDir, false);
-
-      // Verificação de Impacto via Raycast
-      const shootableObjects = [...obstacles, floor];
-      enemies.forEach(e => e.group.children.forEach(c => shootableObjects.push(c)));
-
-      const intersects = raycaster.intersectObjects(shootableObjects);
-
-      if (intersects.length > 0) {
-        const hit = intersects[0];
-        
-        // Gera faíscas no ponto de impacto
-        spawnSparks(hit.point, hit.face.normal);
-
-        // Verifica se acertou um NPC inimigo
-        let obj = hit.object;
-        while (obj.parent && obj.parent !== scene) {
-          const enemyObj = enemies.find(e => e.group === obj.parent);
-          if (enemyObj) {
-            enemyObj.hp -= 35;
-            // Efeito visual de dano no NPC
-            hit.object.material.color.setHex(0xffffff);
-            setTimeout(() => hit.object.material.color.setHex(0x1f232b), 80);
-
-            if (enemyObj.hp <= 0) {
-              scene.remove(enemyObj.group);
-              const idx = enemies.indexOf(enemyObj);
-              if (idx > -1) enemies.splice(idx, 1);
-            }
-            break;
-          }
-          obj = obj.parent;
-        }
-      }
-    });
-
-    function reload() {
-      isReloading = true;
-      document.getElementById('ammo').innerText = '...';
-      setTimeout(() => {
-        ammo = 30;
-        document.getElementById('ammo').innerText = ammo;
-        isReloading = false;
-      }, 1400);
-    }
-
-    function takeDamage(amount) {
-      if (isDead) return;
-      playerHP -= amount;
-      if (playerHP < 0) playerHP = 0;
-
-      // Atualiza HUD
-      document.getElementById('health-bar-fill').style.width = playerHP + '%';
-
-      // Flasha tela de vermelho
-      const overlay = document.getElementById('damage-overlay');
-      overlay.style.opacity = '1';
-      setTimeout(() => overlay.style.opacity = '0', 200);
-
-      if (playerHP <= 0) {
-        isDead = true;
-        document.exitPointerLock();
-        document.getElementById('game-over').style.display = 'flex';
-      }
-    }
-
-    // 7. LOOP DE ANIMAÇÃO E IA DOS NPCS
     const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
-      const time = clock.getElapsedTime();
 
-      if (isLocked && !isDead) {
-        // Movimentação do Jogador
-        const speed = 10.0 * delta;
+      if (isLocked) {
         const move = new THREE.Vector3();
         if (keys['KeyW']) move.z -= 1;
         if (keys['KeyS']) move.z += 1;
@@ -533,98 +166,22 @@
 
         move.normalize().applyQuaternion(camera.quaternion);
         move.y = 0;
-        camera.position.addScaledVector(move, speed);
+        camera.position.addScaledVector(move, 8 * delta);
 
-        // Animação de Balanço da Arma ao Andar (Sway)
-        if (move.length() > 0) {
-          weaponGroup.position.y = -0.32 + Math.sin(time * 10) * 0.012;
-          weaponGroup.position.x = 0.32 + Math.cos(time * 5) * 0.008;
-        } else {
-          weaponGroup.position.y = -0.32 + Math.sin(time * 2) * 0.003;
-        }
-
-        // Recuperação do Recuo
-        recoilOffset = THREE.MathUtils.lerp(recoilOffset, 0, delta * 18);
-        recoilRot = THREE.MathUtils.lerp(recoilRot, 0, delta * 18);
-        weaponGroup.position.z = -0.55 + recoilOffset;
-        weaponGroup.rotation.x = recoilRot;
-      }
-
-      // 8. ATUALIZAR TRAÇANTES
-      for (let i = tracers.length - 1; i >= 0; i--) {
-        const t = tracers[i];
-        t.life -= delta;
-        if (t.life <= 0) {
-          scene.remove(t.mesh);
-          tracers.splice(i, 1);
-        } else {
-          t.mesh.position.addScaledVector(t.dir, t.speed * delta);
+        // Envia posição/rotação via WebRTC para o outro jogador online
+        if (conn && conn.open) {
+          conn.send({
+            type: 'move',
+            x: camera.position.x,
+            y: camera.position.y - 0.8,
+            z: camera.position.z,
+            rotY: euler.y
+          });
         }
       }
-
-      // 9. ATUALIZAR FAÍSCAS
-      for (let i = sparks.length - 1; i >= 0; i--) {
-        const s = sparks[i];
-        s.life -= delta;
-        if (s.life <= 0) {
-          scene.remove(s.mesh);
-          sparks.splice(i, 1);
-        } else {
-          s.vel.y -= 9.8 * delta; // Gravidade
-          s.mesh.position.addScaledVector(s.vel, delta);
-        }
-      }
-
-      // 10. IA DOS NPCS (MOVIMENTO E TIRO)
-      enemies.forEach(enemy => {
-        const ePos = enemy.group.position;
-        const pPos = camera.position;
-        const distToPlayer = ePos.distanceTo(pPos);
-
-        // Olhar para o jogador
-        enemy.group.lookAt(pPos.x, ePos.y, pPos.z);
-
-        // Movimentar em direção ao jogador se estiver longe
-        if (distToPlayer > 8 && distToPlayer < 65) {
-          const dir = new THREE.Vector3().subVectors(pPos, ePos).normalize();
-          dir.y = 0;
-          ePos.addScaledVector(dir, enemy.speed * delta);
-        }
-
-        // Sistema de Tiro do NPC
-        if (distToPlayer < 50 && !isDead) {
-          if (time - enemy.lastShootTime > enemy.shootInterval) {
-            enemy.lastShootTime = time;
-
-            // Posição da arma do NPC
-            const npcGunPos = ePos.clone().add(new THREE.Vector3(0, 1.1, 0));
-            const shootDir = new THREE.Vector3().subVectors(pPos, npcGunPos).normalize();
-
-            // Adiciona um pouco de imprecisão ao tiro do NPC
-            shootDir.x += (Math.random() - 0.5) * 0.08;
-            shootDir.y += (Math.random() - 0.5) * 0.08;
-
-            // Spawna traçante vermelho do inimigo
-            spawnTracer(npcGunPos, shootDir, true);
-
-            // Chance de acertar o jogador com base na distância
-            if (Math.random() < 0.6 && distToPlayer < 35) {
-              setTimeout(() => {
-                takeDamage(12);
-              }, (distToPlayer / 120) * 1000);
-            }
-          }
-        }
-      });
 
       renderer.render(scene, camera);
     }
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
 
     animate();
   </script>
