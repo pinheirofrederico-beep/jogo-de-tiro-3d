@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Jogo de Tiro 3D</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      user-select: none;
+    }
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      margin-top: -5px;
+      margin-left: -5px;
+      border: 2px solid rgba(255, 255, 255, 0.8);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    #instructions {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 15px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="crosshair"></div>
+  <div id="instructions">
+    Clique na tela para ativar o controle do mouse.<br>
+    <b>W, A, S, D</b>: Mover | <b>Mouse</b>: Olhar | <b>Clique Esquerdo</b>: Atirar
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // 1. Cena, Câmera e Renderizador
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x22252a);
+    scene.fog = new THREE.FogExp2(0x22252a, 0.015);
+
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // 2. Iluminação
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(20, 40, 20);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 150;
+    const d = 40;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
+
+    // 3. Cenário (Chão e Obstáculos)
+    const floorGeo = new THREE.PlaneGeometry(100, 100);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    // Caixas/Obstáculos
+    const boxGeo = new THREE.BoxGeometry(2, 4, 2);
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.4 });
+    for (let i = 0; i < 15; i++) {
+      const box = new THREE.Mesh(boxGeo, boxMat);
+      box.position.set((Math.random() - 0.5) * 60, 2, (Math.random() - 0.5) * 60);
+      box.castShadow = true;
+      box.receiveShadow = true;
+      scene.add(box);
+    }
+
+    // Alvos (Cubos vermelhos)
+    const targets = [];
+    const targetGeo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+    const targetMat = new THREE.MeshStandardMaterial({ color: 0xd9534f });
+    for (let i = 0; i < 8; i++) {
+      const target = new THREE.Mesh(targetGeo, targetMat);
+      target.position.set((Math.random() - 0.5) * 50, 0.75, (Math.random() - 0.5) * 50);
+      target.castShadow = true;
+      target.receiveShadow = true;
+      scene.add(target);
+      targets.push(target);
+    }
+
+    // 4. Jogador e Câmera
+    camera.position.set(0, 1.7, 0);
+
+    const keys = {};
+    document.addEventListener('keydown', (e) => keys[e.code] = true);
+    document.addEventListener('keyup', (e) => keys[e.code] = false);
+
+    // Pointer Lock (Trava do ponteiro do mouse)
+    let isLocked = false;
+    document.body.addEventListener('click', () => {
+      document.body.requestPointerLock();
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+      isLocked = document.pointerLockElement === document.body;
+    });
+
+    // Controle de Olhar (Euler angles)
+    const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+    document.addEventListener('mousemove', (event) => {
+      if (!isLocked) return;
+      const movementX = event.movementX || 0;
+      const movementY = event.movementY || 0;
+
+      euler.y -= movementX * 0.002;
+      euler.x -= movementY * 0.002;
+      euler.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, euler.x));
+
+      camera.quaternion.setFromEuler(euler);
+    });
+
+    // 5. Sistema de Tiro (Raycasting)
+    const raycaster = new THREE.Raycaster();
+    const bullets = [];
+
+    document.addEventListener('mousedown', (e) => {
+      if (!isLocked || e.button !== 0) return;
+
+      // Dispara um raio do centro da câmera
+      raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+      const intersects = raycaster.intersectObjects(targets);
+
+      if (intersects.length > 0) {
+        const hitObject = intersects[0].object;
+        // Efeito ao acertar: muda de cor e reposiciona
+        hitObject.material.color.setHex(0x5cb85c);
+        setTimeout(() => {
+          hitObject.material.color.setHex(0xd9534f);
+          hitObject.position.set((Math.random() - 0.5) * 50, 0.75, (Math.random() - 0.5) * 50);
+        }, 300);
+      }
+    });
+
+    // 6. Loop de Animação
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = clock.getDelta();
+      const moveSpeed = 8.0 * delta;
+
+      if (isLocked) {
+        const moveVector = new THREE.Vector3();
+
+        if (keys['KeyW']) moveVector.z -= 1;
+        if (keys['KeyS']) moveVector.z += 1;
+        if (keys['KeyA']) moveVector.x -= 1;
+        if (keys['KeyD']) moveVector.x += 1;
+
+        moveVector.normalize();
+        moveVector.applyQuaternion(camera.quaternion);
+        moveVector.y = 0; // Mantém no plano horizontal
+
+        camera.position.addScaledVector(moveVector, moveSpeed);
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    // Ajuste de Janela
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>
